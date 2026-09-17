@@ -6,3 +6,5 @@ seaborn
 mlflow
 flask
 python-dotenv
+ipykernel
+dvc
