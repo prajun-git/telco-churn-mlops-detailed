@@ -6,3 +6,4 @@ models/*.pkl
 mlruns/
 .env
 logs/
+models/archive/

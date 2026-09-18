@@ -150,3 +150,35 @@ A local script satisfies the monitoring *logic*; a real dashboard
 (Grafana/Prometheus) or scheduled alerting job is out of scope for a
 laptop deployment but would consume the same `predictions.jsonl` data
 or `check_drift.py` output as its source.
+---------------------------------------------------------------------------
+
+## Phase 8: Continuous Training and Retraining
+
+### Retraining Triggers (Step 8.1) — documented, not scheduled
+In production, retraining would fire on:
+- **Scheduled** (e.g., weekly via cron / Windows Task Scheduler / Airflow)
+- **Drift threshold crossed** (`src/check_drift.py` reporting DRIFT status)
+- **New data volume threshold reached**
+
+For this laptop project, retraining is triggered manually by running
+`python src/retrain_gate.py`. The scheduling infrastructure itself
+(cron, Task Scheduler, or an orchestrator like Airflow/Prefect) is out
+of scope, but the retraining *logic* it would call is fully implemented
+and tested.
+
+### Validation Gate (Step 8.3) — implemented
+`src/retrain_gate.py` wraps the training pipeline:
+1. Evaluates the current champion model on validation data
+2. Backs up the current model/encoders to `models/archive/`
+3. Trains a new candidate model
+4. Compares F1 scores — rejects and auto-rolls-back if the new model's
+   F1 drops by more than 2% (`MAX_ACCEPTABLE_F1_DROP = 0.02`)
+
+Tested both paths explicitly: confirmed a normal retrain is accepted,
+and confirmed (via a temporarily lowered threshold) that a rejected
+retrain correctly restores the previous champion from backup.
+
+### Version Tracking / Rollback (Step 8.4, 8.5) — implemented
+Every retrain backs up the current model to
+`models/archive/champion_model_<timestamp>.pkl` before overwriting,
+enabling manual rollback to any previous version if needed.
