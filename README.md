@@ -219,3 +219,93 @@ prediction audit trail.
 ### Data Privacy (Step 9.5) — not applicable
 The Telco dataset is public and anonymized (no PII beyond a masked
 `customerID`); encryption and RBAC are not applicable at this scale.
+-----------------------------------------------------------------------------------
+## Phase 10: Maintenance and Iteration
+
+### A/B Testing Framework (Step 10.2) — implemented
+`src/ab_test.py` compares the current champion model against any
+archived candidate (from `models/archive/`, populated by the retraining
+gate) on F1 and AUC-ROC. Validated against a known-identical model:
+correctly reported a tie, confirming the comparison logic itself works
+correctly before it's needed to catch a real difference.
+
+### Runbook: Common Operations
+
+**Retrain the model:**
+
+python src/retrain_gate.py
+
+Automatically backs up the current champion, trains a new candidate,
+and only replaces the champion if F1 doesn't drop by more than 2%.
+
+**Check for data drift:*
+
+python src/check_drift.py
+
+Compares live prediction inputs (from `logs/predictions.jsonl`) against
+training data distribution. Note: needs a meaningful sample size
+(dozens+) to be statistically trustworthy — see Phase 7 notes.
+
+**Roll back to a previous model version:**
+Model backups live in `models/archive/champion_model_<timestamp>.pkl`
+and `encoders_<timestamp>.pkl`. To roll back manually, copy the desired
+backup over `models/champion_model.pkl` and `models/encoders.pkl`.
+
+**Run the full pipeline from scratch:**
+
+python src/run_pipeline.py
+
+Runs data prep → split → train → evaluate end-to-end.
+
+**Start the API locally:**
+
+python src/app.py
+
+**Start the API in Docker:**
+
+docker build -t telco-churn-api .
+docker run -p 5000:5000 telco-churn-api
+
+
+### Architecture Overview
+
+Raw CSV (DVC-tracked)
+|
+v
+data_prep.py --> cleaned CSV (DVC-tracked)
+|
+v
+split_data.py --> train/val/test (DVC-tracked)
+|
+v
+train.py --> champion_model.pkl + encoders.pkl (MLflow-logged)
+|
+v
+app.py --> Flask API (Dockerized) --> /predict (+ SHAP explanation)
+|
+v
+logs/predictions.jsonl --> check_drift.py (monitoring)
+
+retrain_gate.py wraps train.py with a validation gate + rollback,
+using archived models for later A/B comparison (ab_test.py).
+
+
+### Review Schedule (Step 10.1) — documented policy
+For a production version of this project, recommended cadence:
+- **Weekly:** review `check_drift.py` output against accumulated
+  prediction logs
+- **Monthly:** re-run `retrain_gate.py` on fresh data, review MLflow
+  run comparison
+- **Quarterly:** revisit SHAP feature importance — confirm business
+  logic still holds as customer behavior evolves
+
+### Cost Optimization (Step 10.4) — not applicable
+Cloud cost optimization (spot instances, autoscaling) doesn't apply to
+a local laptop deployment. Noted for future cloud migration.
+
+### User Feedback (Step 10.3) — not implemented
+Would require a human-in-the-loop interface for retention teams to
+confirm/dispute predictions — out of scope for this project's MVP.
+
+
+
