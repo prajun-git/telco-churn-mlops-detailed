@@ -1,5 +1,20 @@
 import sys
 import os
+import json
+from datetime import datetime
+LOG_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs", "predictions.jsonl")
+
+
+def log_prediction(payload, prediction, probability):
+    os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
+    record = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "input": payload,
+        "prediction": "Yes" if prediction == 1 else "No",
+        "probability": round(float(probability), 4),
+    }
+    with open(LOG_PATH, "a") as f:
+        f.write(json.dumps(record) + "\n")
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -48,11 +63,12 @@ def predict():
     prediction = model.predict(X)[0]
     probability = model.predict_proba(X)[0][1]
 
+    log_prediction(payload, prediction, probability)  # <-- add this line
+
     return jsonify({
         "churn_prediction": "Yes" if prediction == 1 else "No",
         "churn_probability": round(float(probability), 4)
     }), 200
-
 
 if __name__ == "__main__":
     from waitress import serve
