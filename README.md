@@ -182,3 +182,40 @@ retrain correctly restores the previous champion from backup.
 Every retrain backs up the current model to
 `models/archive/champion_model_<timestamp>.pkl` before overwriting,
 enabling manual rollback to any previous version if needed.
+
+----------------------------------------------------------------------
+## Phase 9: Governance and Compliance
+
+### Model Explainability (Step 9.2) — implemented
+`src/explain.py` generates a global SHAP summary plot
+(`models/shap_summary.png`) showing which features drive churn
+predictions across the model as a whole. Top global drivers: `Contract`,
+`tenure`, `OnlineSecurity`, `MonthlyCharges`, `TechSupport` — consistent
+with domain intuition (short tenure, flexible contracts, and missing
+add-on services correlate with higher churn risk).
+
+The `/predict` API endpoint returns a `top_factors` field with each
+response — the top 3 SHAP-driven features for that specific prediction,
+with direction (increases/decreases risk). This directly satisfies the
+interpretability requirement from Phase 1: retention teams can see not
+just *that* a customer is flagged, but *why*, and act on it.
+
+### Model Lineage (Step 9.1) — documented
+End-to-end lineage for the current champion model:
+`data/raw/WA_Fn-UseC_-Telco-Customer-Churn.csv` (DVC-tracked)
+→ `data_prep.py` → `data/processed/telco_churn_cleaned.csv` (DVC-tracked)
+→ `split_data.py` → train/val/test splits (DVC-tracked)
+→ `train.py` → `models/champion_model.pkl` + `encoders.pkl`,
+  logged to MLflow (experiment: `telco-churn-prediction`)
+→ `src/app.py` — deployed via Docker container
+
+### Approval Workflow / Audit Logs (Step 9.3, 9.4) — not implemented
+A formal dev→staging→production approval workflow and dedicated audit
+trail are enterprise-scale concerns beyond a solo laptop project.
+`src/retrain_gate.py` (Phase 8) provides a lightweight automated
+approval gate, and `logs/predictions.jsonl` (Phase 7) serves as a basic
+prediction audit trail.
+
+### Data Privacy (Step 9.5) — not applicable
+The Telco dataset is public and anonymized (no PII beyond a masked
+`customerID`); encryption and RBAC are not applicable at this scale.
