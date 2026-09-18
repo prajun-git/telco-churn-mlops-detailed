@@ -88,3 +88,37 @@ Trade-off: 64 additional false positives (164 vs 100) — more customers
 flagged who would not have churned. Accepted given the above reasoning.
 
 MLflow Run ID: *(paste the random_forest_balanced run ID from the UI here)*
+
+----------------------------------------------------------------------
+
+## Phase 6: Model Deployment
+
+### Deployment Strategy
+Online (REST API) — chosen per Phase 1 feasibility: not latency-critical,
+but interactive scoring is valuable for demos and future integration.
+
+### Architecture
+- `src/app.py` — Flask inference API (`/health`, `/predict`)
+- Preprocessing (label encoding) uses the exact encoders saved during
+  training (`models/encoders.pkl`) to prevent train/serve skew
+- Served via `waitress` (production WSGI server), not Flask's dev server
+- Containerized with Docker (`Dockerfile`, `.dockerignore`)
+
+### Endpoints
+- `GET /health` — liveness check
+- `POST /predict` — accepts a JSON customer record, returns
+  `churn_prediction` (Yes/No) and `churn_probability`
+
+### Not implemented (would apply at cloud/enterprise scale)
+- **Canary / blue-green deployment (6.5):** at cloud scale, a new model
+  version would be routed a small percentage of traffic first, or run
+  alongside the current version with instant rollback capability. For
+  a single-container laptop deployment, this isn't applicable —
+  rollback here means keeping the previous `champion_model.pkl` and
+  redeploying it (see Phase 8 for versioning plan).
+- **Load balancer / autoscaling (6.6):** relevant when running multiple
+  container replicas behind traffic (e.g., on Kubernetes or a managed
+  platform like SageMaker/Vertex AI). A single local container has no
+  need for this, but the containerized design means it *could* be
+  deployed behind a load balancer without any code changes if traffic
+  demanded it later.
