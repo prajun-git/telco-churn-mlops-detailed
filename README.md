@@ -122,3 +122,31 @@ but interactive scoring is valuable for demos and future integration.
   need for this, but the containerized design means it *could* be
   deployed behind a load balancer without any code changes if traffic
   demanded it later.
+
+  ----------------------------------------------------------------------
+
+  ## Phase 7: Monitoring and Observability
+
+### Prediction Logging
+Every `/predict` call logs a record (timestamp, input features, prediction,
+probability) to `logs/predictions.jsonl` (JSON Lines format, append-only).
+
+### Drift Detection
+`src/check_drift.py` compares the mean of key numeric features (`tenure`,
+`MonthlyCharges`, `TotalCharges`) between the training set and logged live
+predictions, flagging any feature whose mean has shifted more than 20%
+(per Step 7.4's example threshold).
+
+**Known limitation:** this check is only statistically meaningful once a
+reasonable volume of live predictions has accumulated (dozens+, ideally
+hundreds). With only a handful of logged predictions, the reported "drift"
+mostly reflects sampling noise from which test cases happened to be sent,
+not a genuine shift in customer population. In production, this check
+would run on a rolling window (e.g., "last 1,000 predictions" or
+"last 7 days") rather than the full log from day one.
+
+### Dashboards / Alerting (Step 7.5) — not implemented
+A local script satisfies the monitoring *logic*; a real dashboard
+(Grafana/Prometheus) or scheduled alerting job is out of scope for a
+laptop deployment but would consume the same `predictions.jsonl` data
+or `check_drift.py` output as its source.
