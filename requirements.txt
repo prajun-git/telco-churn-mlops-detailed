@@ -8,3 +8,4 @@ flask
 python-dotenv
 ipykernel
 dvc
+waitress

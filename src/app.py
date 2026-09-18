@@ -55,4 +55,6 @@ def predict():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    from waitress import serve
+    print("Starting server on http://0.0.0.0:5000")
+    serve(app, host="0.0.0.0", port=5000)
