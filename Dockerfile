@@ -9,6 +9,6 @@ COPY src/ src/
 COPY configs/ configs/
 COPY models/ models/
 
-EXPOSE 5000
+EXPOSE 8000
 
-CMD ["python", "src/app.py"]
+CMD ["uvicorn", "src.app_fastapi:app", "--host", "0.0.0.0", "--port", "8000"]

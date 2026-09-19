@@ -307,5 +307,29 @@ a local laptop deployment. Noted for future cloud migration.
 Would require a human-in-the-loop interface for retention teams to
 confirm/dispute predictions — out of scope for this project's MVP.
 
+-----------------------------------------------------------------------
+
+## API
+
+Two implementations exist:
+
+### FastAPI (primary — used in Docker deployment)
+`src/app_fastapi.py` — served via `uvicorn`, containerized in the
+Dockerfile. Provides automatic request validation (Pydantic) and
+interactive API documentation at `/docs`.
+
+Run locally:
+
+uvicorn src.app_fastapi:app --host 0.0.0.0 --port 8000
+
+Then visit `http://127.0.0.1:8000/docs` for interactive testing.
+
+### Flask (original implementation)
+`src/app.py` — served via `waitress`. Kept for comparison; functionally
+identical predictions and SHAP explanations.
+
+Run locally:
+
+python src/app.py
 
 
