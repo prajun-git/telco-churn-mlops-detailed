@@ -91,6 +91,17 @@ MLflow Run ID: *(paste the random_forest_balanced run ID from the UI here)*
 
 ----------------------------------------------------------------------
 
+### CI/CD (Step 5.3) — implemented
+`.github/workflows/ci.yml` runs on every push to `master`:
+1. Pulls versioned data from the DVC remote (AWS S3)
+2. Runs the full pipeline (`run_pipeline.py`) end-to-end on a fresh
+   environment — data cleaning, splitting, training, and evaluation
+3. Verifies the resulting model artifacts exist
+
+This validates that the entire pipeline reproduces correctly outside
+the local development environment, not just that individual scripts
+compile.
+
 ## Phase 6: Model Deployment
 
 ### Deployment Strategy
@@ -331,5 +342,8 @@ identical predictions and SHAP explanations.
 Run locally:
 
 python src/app.py
+
+
+
 
 
