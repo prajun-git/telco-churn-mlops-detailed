@@ -7,6 +7,6 @@ mlflow
 flask
 python-dotenv
 ipykernel
-dvc
+dvc[s3]
 waitress
 shap
