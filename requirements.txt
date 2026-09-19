@@ -10,3 +10,5 @@ ipykernel
 dvc[s3]
 waitress
 shap
+fastapi
+uvicorn
