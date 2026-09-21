@@ -103,6 +103,7 @@ def run():
     "model",
     signature=signature,
     input_example=X_train.iloc[:5],
+    skops_trusted_types=["sklearn.tree._tree.Tree"],
 )
         run_id = mlflow.active_run().info.run_id
 
