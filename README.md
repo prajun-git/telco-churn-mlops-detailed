@@ -343,7 +343,64 @@ Run locally:
 
 python src/app.py
 
+--------------------------------------------------------------
 
+## Phase 6 Extended: Cloud Deployment on AWS EC2
+
+### Deployment Architecture
+- **Data**: DVC remote on AWS S3 (`s3://telco-churn-mlops-prjn/dvcstore`) — data
+  pulled fresh via `dvc pull` on any machine (laptop or cloud) with the
+  right AWS credentials
+- **Compute**: AWS EC2 (`t3.micro`, free tier), Ubuntu 26.04
+- **Container**: Docker, serving the FastAPI app on port 8000
+
+### A Real Production Bug: Train/Serve Environment Skew
+Deploying to EC2 surfaced a genuine MLOps failure mode, not just
+infrastructure setup:
+
+- EC2's system Python (3.14) was far newer than the project's pinned
+  dependencies (built for Python 3.8, matching the Docker base image
+  and local dev environment).
+- Training directly on the EC2 host — using its own newer Python —
+  produced a model pickled with newer numpy/scikit-learn than what the
+  serving container (Python 3.8-slim) could load, causing
+  `ModuleNotFoundError: No module named 'numpy._core'` at serve time.
+- Installing an older Python via the `deadsnakes` PPA wasn't possible:
+  Ubuntu 26.04 requires a newer OpenSSL that `deadsnakes` doesn't
+  support pairing with Python 3.8.
+
+**Resolution**: rather than fight the host OS's Python version, training
+was run *inside* the same `python:3.8-slim` Docker image used for
+serving:
+
+docker run --rm -v $(pwd):/app telco-churn-api python src/run_pipeline.py
+
+This guarantees training and serving always use an identical
+environment by construction — the correct fix for this class of bug,
+not just a version-pinning workaround.
+
+### Other issues resolved along the way
+- Docker's default (`apt`-installed) builder on Ubuntu lacked BuildKit
+  support (`buildx`), causing builds to hang silently — fixed by
+  manually installing the `buildx` CLI plugin.
+- MLflow's newer filesystem-tracking deprecation required
+  `MLFLOW_ALLOW_FILE_STORE=true` to keep using the existing `mlruns/`
+  setup.
+- EC2's default `t3.micro` (1GB RAM, small root volume) needed a 2GB
+  swapfile and an EBS volume resize (8GB → 20GB) to complete dependency
+  installation; a `/tmp` tmpfs mount (455MB) also needed pip's `TMPDIR`
+  redirected to the main disk.
+
+### Verified Working
+- `http://<ec2-public-ip>:8000/docs` — interactive API docs, publicly reachable
+- `/predict` returns identical results to local/Docker runs (same
+  model, same SHAP explanations), confirming environment parity between
+  training and serving
+
+**Note**: this instance does not have an Elastic IP allocated, so the
+public IP changes on stop/start. For a persistent demo, allocate an
+Elastic IP (small ongoing cost once unattached, free while attached to
+a running instance).
 
 
 
