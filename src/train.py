@@ -103,8 +103,9 @@ def run():
     "model",
     signature=signature,
     input_example=X_train.iloc[:5],
-    skops_trusted_types=["sklearn.tree._tree.Tree"],
-)
+git add src/train.py
+git commit -m "Remove skops_trusted_types parameter (not supported in mlflow 2.17.2, only needed for newer mlflow)"
+git push)
         run_id = mlflow.active_run().info.run_id
 
     print("Saving model + encoders to disk...")
